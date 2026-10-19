@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contribution Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F4EC;
+    --ink: #1A1A16;
+    --ink-soft: #5B5A4F;
+    --green: #1F3A2E;
+    --green-soft: #34523F;
+    --gold: #C9973A;
+    --line: #DDD8C6;
+    --track: #E7E2D1;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14201A;
+      --ink: #F2EFE4;
+      --ink-soft: #A9A695;
+      --green: #DDECDF;
+      --green-soft: #9FC4AC;
+      --gold: #E0B45C;
+      --line: #2C3B31;
+      --track: #22301F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14201A;
+    --ink: #F2EFE4;
+    --ink-soft: #A9A695;
+    --green: #DDECDF;
+    --green-soft: #9FC4AC;
+    --gold: #E0B45C;
+    --line: #2C3B31;
+    --track: #22301F;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Karla', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 0 20px 64px;
+  }
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  header {
+    padding: 56px 0 8px;
+  }
+  .eyebrow {
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: 'Bitter', Georgia, serif;
+    font-weight: 600;
+    font-size: 28px;
+    line-height: 1.25;
+    margin: 0;
+    color: var(--green, #1F3A2E);
+  }
+  html:not([data-theme]) h1,
+  :root:not([data-theme="light"]) h1 { color: var(--green); }
+
+  .hero {
+    padding: 40px 0 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .raised-label {
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+  .raised-amount {
+    font-family: 'Bitter', Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(44px, 11vw, 64px);
+    line-height: 1;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .target-line {
+    margin: 10px 0 26px;
+    font-size: 16px;
+    color: var(--ink-soft);
+  }
+  .target-line strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .bar-track {
+    height: 14px;
+    border-radius: 7px;
+    background: var(--track);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 7px;
+    background: linear-gradient(90deg, var(--green-soft, #34523F), var(--gold));
+    background: var(--green-soft);
+    background-image: linear-gradient(90deg, var(--green-soft) 0%, var(--gold) 100%);
+    transition: width 0.6s ease;
+  }
+  .bar-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 34px;
+  }
+  .bar-meta strong { color: var(--gold); font-weight: 600; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 22px 0;
+    margin-bottom: 40px;
+  }
+  .stat {
+    text-align: left;
+    padding-right: 12px;
+  }
+  .stat-value {
+    font-family: 'Bitter', Georgia, serif;
+    font-weight: 600;
+    font-size: 21px;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  .list-heading {
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+  }
+  ul.contrib-list {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+  }
+  ul.contrib-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 16px;
+  }
+  ul.contrib-list li:last-child { border-bottom: none; }
+  .c-name { font-weight: 500; }
+  .c-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+  .c-amount { font-weight: 600; }
+  .c-date { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+  .empty {
+    color: var(--ink-soft);
+    font-size: 15px;
+    padding: 20px 0;
+  }
+
+  footer {
+    margin-top: 46px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">Group contribution</p>
+      <h1>Fundraising Progress</h1>
+    </header>
+
+    <section class="hero">
+      <p class="raised-label">Raised so far</p>
+      <p class="raised-amount" id="raisedAmount">₦0</p>
+      <p class="target-line">of a <strong id="targetAmount">₦0</strong> target</p>
+
+      <div class="bar-track">
+        <div class="bar-fill" id="barFill" style="width: 0%"></div>
+      </div>
+      <div class="bar-meta">
+        <span id="percentLabel">0% funded</span>
+        <span>Remaining: <strong id="remainingAmount">₦0</strong></span>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="memberCount">0</div>
+          <div class="stat-label">Contributors</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="avgAmount">₦0</div>
+          <div class="stat-label">Average gift</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="lastUpdated">—</div>
+          <div class="stat-label">Last updated</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <p class="list-heading">Contributors</p>
+      <ul class="contrib-list" id="contribList"></ul>
+      <p class="empty" id="emptyState" style="display:none;">No contributions recorded yet.</p>
+    </section>
+
+    <footer>
+      This page is updated by the organizer whenever new contributions come in.
+    </footer>
+  </div>
+
+<script>
+    // ---- DATA: fetched live from GitHub, no manual editing needed ----
+  const DATA_URL = "https://raw.githubusercontent.com/barthynarms/python-projects/master/data.json?t=" + Date.now();
+  // Adding "?t=" + Date.now() avoids the browser showing a stale cached copy.
+ 
+  // Fallback shown only if the live fetch fails (e.g. data.json doesn't exist yet).
+  const FALLBACK_DATA = {
+    target: 500000, 
+    lastUpdated: "—",
+    contributions: []
+
+  };
+  // ---------------------------------------------------------------------
+
+  function formatNaira(n) {
+    return "₦" + Number(n).toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+ 
+  function renderPage(DATA) {
+    const raised = DATA.contributions.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+    const remaining = Math.max(DATA.target - raised, 0);
+    const percent = DATA.target > 0 ? Math.min((raised / DATA.target) * 100, 100) : 0;
+    const count = DATA.contributions.length;
+    const avg = count > 0 ? raised / count : 0;
+ 
+    document.getElementById("raisedAmount").textContent = formatNaira(raised);
+    document.getElementById("targetAmount").textContent = formatNaira(DATA.target);
+    document.getElementById("remainingAmount").textContent = formatNaira(remaining);
+    document.getElementById("percentLabel").textContent = percent.toFixed(1) + "% funded";
+    document.getElementById("barFill").style.width = percent + "%";
+    document.getElementById("memberCount").textContent = count;
+    document.getElementById("avgAmount").textContent = formatNaira(avg);
+    document.getElementById("lastUpdated").textContent = DATA.lastUpdated || "—";
+ 
+    const listEl = document.getElementById("contribList");
+    const emptyEl = document.getElementById("emptyState");
+    listEl.innerHTML = ""; // clear in case this runs more than once
+ 
+    if (count === 0) {
+      emptyEl.style.display = "block";
+    } else {
+      emptyEl.style.display = "none";
+      const sorted = [...DATA.contributions].reverse(); // most recent first
+      sorted.forEach(c => {
+        const li = document.createElement("li");
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "c-name";
+        nameSpan.textContent = c.name;
+ 
+        const right = document.createElement("span");
+        right.className = "c-right";
+ 
+        const amountSpan = document.createElement("span");
+        amountSpan.className = "c-amount";
+        amountSpan.textContent = formatNaira(c.amount);
+ 
+        const dateSpan = document.createElement("span");
+        dateSpan.className = "c-date";
+        dateSpan.textContent = c.date || "";
+ 
+        right.appendChild(amountSpan);
+        right.appendChild(dateSpan);
+ 
+        li.appendChild(nameSpan);
+        li.appendChild(right);
+        listEl.appendChild(li);
+      });
+    }
+  }
+ 
+  // Try to fetch the live data from GitHub. If it fails for any reason
+  // (no internet, file doesn't exist yet, etc.), fall back gracefully
+  // instead of leaving the page blank.
+  fetch(DATA_URL)
+    .then(response => {
+      if (!response.ok) throw new Error("data.json not found yet");
+      return response.json();
+    })
+    .then(data => renderPage(data))
+    .catch(err => {
+      console.warn("Could not load live data, showing fallback:", err);
+      renderPage(FALLBACK_DATA);
+    });
+</script>
+</body>
+</html>
