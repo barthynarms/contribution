@@ -195,6 +195,27 @@
     border-top: 1px solid var(--line);
     padding-top: 18px;
   }
+
+  [hidden] { display: none !important; }
+  .deadline { margin: 10px 0 0; font-size: 15px; color: var(--gold); font-weight: 600; }
+  .pay { margin: 0 0 40px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .pay h2, .list-head h2 { font-size: 15px; font-weight: 400; color: var(--ink-soft); margin: 0 0 12px; }
+  .pay-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 16px; }
+  .pay-row span:first-child { color: var(--ink-soft); }
+  .pay-num { font-family: 'Bitter', Georgia, serif; font-weight: 600; font-size: 20px; }
+  button, select {
+    font: inherit; font-size: 14px; color: var(--ink); background: transparent;
+    border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer;
+  }
+  button:focus-visible, select:focus-visible, a.share:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  a.share {
+    display: inline-block; font-size: 14px; text-decoration: none; color: #fff; background: #1F7A4D;
+    border-radius: 6px; padding: 8px 14px;
+  }
+  .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .list-head h2 { margin: 0; }
+  .share-wrap { margin: 0 0 36px; }
 </style>
 </head>
 <body>
@@ -202,6 +223,7 @@
     <header>
       <p class="eyebrow">Group contribution</p>
       <h1>Fundraising Progress</h1>
+      <p class="deadline" id="deadline" hidden></p>
     </header>
 
     <section class="hero">
@@ -233,8 +255,26 @@
       </div>
     </section>
 
+    <section class="pay" id="paySection" hidden>
+      <h2>How to contribute</h2>
+      <div class="pay-row"><span>Bank</span><span id="payBank"></span></div>
+      <div class="pay-row"><span>Account name</span><span id="payName"></span></div>
+      <div class="pay-row"><span>Account number</span><span class="pay-num" id="payNum"></span></div>
+      <div class="actions"><button type="button" id="copyBtn">Copy account number</button>
+        <a class="share" id="proofBtn" target="_blank" rel="noopener" hidden>Send proof on WhatsApp</a></div>
+    </section>
+
+    <div class="share-wrap"><a class="share" id="shareBtn" target="_blank" rel="noopener">Share on WhatsApp</a></div>
+
     <section>
-      <p class="list-heading">Contributors</p>
+      <div class="list-head">
+        <h2>Contributors</h2>
+        <select id="sortSel" aria-label="Sort contributors">
+          <option value="newest">Newest first</option>
+          <option value="highest">Highest amount</option>
+          <option value="name">Name A to Z</option>
+        </select>
+      </div>
       <ul class="contrib-list" id="contribList"></ul>
       <p class="empty" id="emptyState" style="display:none;">No contributions recorded yet.</p>
     </section>
@@ -245,89 +285,114 @@
   </div>
 
 <script>
-    // ---- DATA: fetched live from GitHub, no manual editing needed ----
-  const DATA_URL = "https://raw.githubusercontent.com/barthynarms/python-projects/master/data.json?t=" + Date.now();
-  // Adding "?t=" + Date.now() avoids the browser showing a stale cached copy.
- 
-  // Fallback shown only if the live fetch fails (e.g. data.json doesn't exist yet).
-  const FALLBACK_DATA = {
-    target: 500000, 
-    lastUpdated: "—",
-    contributions: []
 
+  const CONFIG = {
+    dataUrl: "https://raw.githubusercontent.com/barthynarms/contribution/main/data.json",
+    deadline: "2026-12-31",            // or Leave empty to hide the countdown.
+    nameMode: "initials",              // "full" shows names, "initials" shows H.O. instead
+    refreshSeconds: 60,
+
+    
+    payment: {
+      bank: "opay",              
+      accountName: "Akor Bartholomew",     
+      accountNumber: "7040585914" 
+    },
+
+    whatsapp: "2347040585914"
   };
-  // ---------------------------------------------------------------------
 
-  function formatNaira(n) {
-    return "₦" + Number(n).toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  let current = { target: 0, contributions: [] };
+  const $ = id => document.getElementById(id);
+  const formatNaira = n => "₦" + Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+
+  function parseDate(str) {
+    const m = /(\d+):(\d+) (AM|PM) (\d+)\/(\d+)\/(\d+)/.exec(str || "");
+    if (!m) return 0;
+    let h = Number(m[1]) % 12; if (m[3] === "PM") h += 12;
+    return new Date(+m[6], +m[5] - 1, +m[4], h, +m[2]).getTime();
+  }
+  function showName(name) {
+    const words = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (CONFIG.nameMode === "initials") return words.map(w => w[0].toUpperCase() + ".").join("");
+    return words.map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(" ");
   }
 
- 
-  function renderPage(DATA) {
-    const raised = DATA.contributions.reduce((sum, c) => sum + Number(c.amount || 0), 0);
-    const remaining = Math.max(DATA.target - raised, 0);
-    const percent = DATA.target > 0 ? Math.min((raised / DATA.target) * 100, 100) : 0;
-    const count = DATA.contributions.length;
-    const avg = count > 0 ? raised / count : 0;
- 
-    document.getElementById("raisedAmount").textContent = formatNaira(raised);
-    document.getElementById("targetAmount").textContent = formatNaira(DATA.target);
-    document.getElementById("remainingAmount").textContent = formatNaira(remaining);
-    document.getElementById("percentLabel").textContent = percent.toFixed(1) + "% funded";
-    document.getElementById("barFill").style.width = percent + "%";
-    document.getElementById("memberCount").textContent = count;
-    document.getElementById("avgAmount").textContent = formatNaira(avg);
-    document.getElementById("lastUpdated").textContent = DATA.lastUpdated || "—";
- 
-    const listEl = document.getElementById("contribList");
-    const emptyEl = document.getElementById("emptyState");
-    listEl.innerHTML = ""; // clear in case this runs more than once
- 
-    if (count === 0) {
-      emptyEl.style.display = "block";
-    } else {
-      emptyEl.style.display = "none";
-      const sorted = [...DATA.contributions].reverse(); // most recent first
-      sorted.forEach(c => {
-        const li = document.createElement("li");
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "c-name";
-        nameSpan.textContent = c.name;
- 
-        const right = document.createElement("span");
-        right.className = "c-right";
- 
-        const amountSpan = document.createElement("span");
-        amountSpan.className = "c-amount";
-        amountSpan.textContent = formatNaira(c.amount);
- 
-        const dateSpan = document.createElement("span");
-        dateSpan.className = "c-date";
-        dateSpan.textContent = c.date || "";
- 
-        right.appendChild(amountSpan);
-        right.appendChild(dateSpan);
- 
-        li.appendChild(nameSpan);
-        li.appendChild(right);
-        listEl.appendChild(li);
-      });
+  function renderDeadline() {
+    const el = $("deadline");
+    const end = CONFIG.deadline ? new Date(CONFIG.deadline + "T23:59:59") : null;
+    if (!end || isNaN(end)) { el.hidden = true; return; }
+    const days = Math.ceil((end - Date.now()) / 86400000);
+    el.textContent = days > 1 ? days + " days left" : days === 1 ? "Last day to contribute" : "Deadline has passed";
+    el.hidden = false;
+  }
+
+  function renderPayment() {
+    const p = CONFIG.payment;
+    if (!p.accountNumber) return;
+    $("payBank").textContent = p.bank;
+    $("payName").textContent = p.accountName;
+    $("payNum").textContent = p.accountNumber;
+    $("paySection").hidden = false;
+    if (CONFIG.whatsapp) {
+      $("proofBtn").href = "https://wa.me/" + CONFIG.whatsapp + "?text=" + encodeURIComponent("Hello, I have made my contribution. Here is my proof of payment.");
+      $("proofBtn").hidden = false;
     }
+    $("copyBtn").onclick = () => {
+      const done = () => { $("copyBtn").textContent = "Copied"; setTimeout(() => $("copyBtn").textContent = "Copy account number", 2000); };
+      if (navigator.clipboard) navigator.clipboard.writeText(p.accountNumber).then(done, done); else done();
+    };
   }
- 
-  // Try to fetch the live data from GitHub. If it fails for any reason
-  // (no internet, file doesn't exist yet, etc.), fall back gracefully
-  // instead of leaving the page blank.
-  fetch(DATA_URL)
-    .then(response => {
-      if (!response.ok) throw new Error("data.json not found yet");
-      return response.json();
-    })
-    .then(data => renderPage(data))
-    .catch(err => {
-      console.warn("Could not load live data, showing fallback:", err);
-      renderPage(FALLBACK_DATA);
+
+  function renderList() {
+    const list = $("contribList");
+    const items = [...current.contributions];
+    const mode = $("sortSel").value;
+    if (mode === "highest") items.sort((a, b) => b.amount - a.amount);
+    else if (mode === "name") items.sort((a, b) => showName(a.name).localeCompare(showName(b.name)));
+    else items.sort((a, b) => parseDate(b.date) - parseDate(a.date));
+    list.innerHTML = "";
+    $("emptyState").style.display = items.length ? "none" : "block";
+    items.forEach(c => {
+      const li = document.createElement("li");
+      const name = document.createElement("span"); name.className = "c-name"; name.textContent = showName(c.name);
+      const right = document.createElement("span"); right.className = "c-right";
+      const amt = document.createElement("span"); amt.className = "c-amount"; amt.textContent = formatNaira(c.amount);
+      const date = document.createElement("span"); date.className = "c-date"; date.textContent = c.date || "";
+      right.append(amt, date); li.append(name, right); list.appendChild(li);
     });
+  }
+
+  function renderPage(data) {
+    current = data;
+    const list = data.contributions || [];
+    const raised = list.reduce((sum, c) => sum + Number(c.amount || 0), 0);
+    const target = Number(data.target) || 0;
+    const percent = target > 0 ? Math.min(raised / target * 100, 100) : 0;
+    $("raisedAmount").textContent = formatNaira(raised);
+    $("targetAmount").textContent = formatNaira(target);
+    $("remainingAmount").textContent = formatNaira(Math.max(target - raised, 0));
+    $("percentLabel").textContent = percent.toFixed(1) + "% funded";
+    $("barFill").style.width = percent + "%";
+    $("memberCount").textContent = list.length;
+    $("avgAmount").textContent = formatNaira(list.length ? raised / list.length : 0);
+    $("lastUpdated").textContent = data.last_updated || data.lastUpdated || "—";
+    const msg = "We have raised " + formatNaira(raised) + " of " + formatNaira(target) + " (" + Math.round(percent) + "%). Track our progress and contribute here: " + location.href.split("#")[0];
+    $("shareBtn").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+    renderList();
+  }
+
+  function load() {
+    fetch(CONFIG.dataUrl + "?t=" + Date.now())
+      .then(r => { if (!r.ok) throw new Error("data.json not found"); return r.json(); })
+      .then(renderPage)
+      .catch(err => { console.warn("Could not load data:", err); if (!current.target) renderPage(current); });
+  }
+
+  $("sortSel").onchange = renderList;
+  renderDeadline(); renderPayment(); load();
+  setInterval(load, CONFIG.refreshSeconds * 1000);
+  setInterval(renderDeadline, 3600000);
 </script>
 </body>
 </html>
