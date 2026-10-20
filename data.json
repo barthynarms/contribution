@@ -1,6 +1,6 @@
 {
   "target": 500000,
-  "last_updated": "02:36 PM 07/10/2026",
+  "last_updated": "01:30 AM 20/10/2026",
   "contributions": [
     {
       "name": "helen ogeh",
@@ -31,6 +31,11 @@
       "name": "faith owicho",
       "amount": 50000.0,
       "date": "02:36 PM 07/10/2026"
+    },
+    {
+      "name": "peace onma",
+      "amount": 45000.0,
+      "date": "01:30 AM 20/10/2026"
     }
   ]
 }
