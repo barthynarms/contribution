@@ -27,8 +27,11 @@ def load_data():
 
 
 def save_data(contributions):
-    with open(DATA_FILE, "w") as f:
-        json.dump(contributions, f, indent=2)
+    try:
+        with open(DATA_FILE, "w") as f:
+            json.dump(contributions, f, indent=2)
+    except OSError as e:
+        print(f"❌ Could not save contributions.json: {e}")
 
 
 def save_web_data(contributions):
@@ -37,9 +40,13 @@ def save_web_data(contributions):
         "last_updated": now_string(),
         "contributions": contributions,
     }
-    with open(WEB_DATA_FILE, "w") as f:
-        json.dump(payload, f, indent=2)
-    print("📝 data.json updated - commit and push it to go live.")
+    try:
+        with open(WEB_DATA_FILE, "w") as f:
+            json.dump(payload, f, indent=2)
+        print("📝 data.json updated - commit and push it to go live.")
+    except OSError as e:
+        print(f"❌ Could not update data.json: {e}")
+
 
 
 def total_raised(contributions):
