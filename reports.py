@@ -9,17 +9,24 @@ from storage import total_raised
 
 def show_progress(contributions):
     raised = total_raised(contributions)
-    remaining = TARGET - raised
-    percent = (raised / TARGET) * 100
-    bar_length = 30
-    filled = int(bar_length * raised / TARGET)
-    bar = "█" * filled + "░" * (bar_length - filled)
 
     print("\n" + "=" * 45)
     print("       CONTRIBUTION PROGRESS TRACKER    ")
     print("=" * 45)
     print(f"Target Amount      : ₦{TARGET:,.2f}")
     print(f"Amount Raised      : ₦{raised:,.2f}")
+
+    if TARGET <= 0:
+        print("⚠️  Target amount is not set (TARGET = 0). Update config.py.")
+        print("=" * 45)
+        return
+
+    remaining = TARGET - raised
+    percent = (raised / TARGET) * 100
+    bar_length = 30
+    filled = int(bar_length * raised / TARGET)
+    bar = "█" * filled + "░" * (bar_length - filled)
+
     print(f"Remaining          : ₦{remaining:,.2f}")
     print(f"Total Members      : {len(contributions)}")
     if contributions:
