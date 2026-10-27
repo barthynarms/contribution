@@ -1,6 +1,6 @@
 
 from admin import require_admin
-from receipts import print_receipt
+from receipts import print_receipt, save_receipt_html
 from reports import export_report, show_list
 from storage import now_string, save_data, save_web_data
 
@@ -65,7 +65,7 @@ def add_contribution(contributions):
         # merge into the first existing entry for this name
         entry = contributions[existing_indexes[0]]
         entry["amount"] += amount
-        entry["date"] = timestamp  # update to the most recent contribution date
+        entry["date"] = timestamp  
         print(f"✅ Added ₦{amount:,.2f} to {entry['name']}'s entry (new total: ₦{entry['amount']:,.2f})")
     else:
         entry = {"name": name, "amount": amount, "date": timestamp}
@@ -158,3 +158,15 @@ def receipt_for_contributor(contributions):
         return
     entry = contributions[index - 1]
     print_receipt(entry, entry["amount"], contributions)
+
+
+def html_receipt_for_contributor(contributions):
+    if not contributions:
+        print("No contributions yet.")
+        return
+    show_list(contributions)
+    index = ask_entry_number(contributions, "Enter the number of the contributor: ")
+    if index is None:
+        return
+    entry = contributions[index - 1]
+    save_receipt_html(entry, entry["amount"], contributions)

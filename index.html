@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Contribution Progress</title>
+<meta name="description" content="Live fundraising progress tracker — see how much has been raised, group progress, and who has contributed.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
@@ -216,6 +217,43 @@
   .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
   .list-head h2 { margin: 0; }
   .share-wrap { margin: 0 0 36px; }
+
+  /* Error banner */
+  .error-banner {
+    background: #FEE2E2; color: #991B1B; border-radius: 8px;
+    padding: 12px 16px; font-size: 14px; margin: 16px 0; display: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .error-banner { background: #3B1919; color: #FCA5A5; }
+  }
+  :root[data-theme="dark"] .error-banner { background: #3B1919; color: #FCA5A5; }
+
+  /* Milestone celebration banner */
+  .milestone-banner {
+    display: none; text-align: center; padding: 16px 20px;
+    background: linear-gradient(135deg, var(--green-soft), var(--gold));
+    color: #fff; border-radius: 10px; margin: 20px 0;
+    font-family: 'Bitter', Georgia, serif; font-size: 18px; font-weight: 600;
+  }
+  .milestone-banner.visible {
+    display: block;
+    animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+  @keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  /* Confetti pieces */
+  .confetti-piece {
+    position: fixed; top: -12px; width: 10px; height: 10px;
+    border-radius: 2px; pointer-events: none; z-index: 999;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+  }
 </style>
 </head>
 <body>
@@ -226,12 +264,15 @@
       <p class="deadline" id="deadline" hidden></p>
     </header>
 
+    <div class="error-banner" id="errorBanner">⚠️ Could not load the latest data. Showing last known values — will retry automatically.</div>
+
     <section class="hero">
+      <div class="milestone-banner" id="milestoneBanner">🎉 Goal reached! Thank you to all contributors!</div>
       <p class="raised-label">Raised so far</p>
       <p class="raised-amount" id="raisedAmount">₦0</p>
       <p class="target-line">of a <strong id="targetAmount">₦0</strong> target</p>
 
-      <div class="bar-track">
+      <div id="barTrack" class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Fundraising progress">
         <div class="bar-fill" id="barFill" style="width: 0%"></div>
       </div>
       <div class="bar-meta">
@@ -288,8 +329,7 @@
 
   const CONFIG = {
     dataUrl: "https://raw.githubusercontent.com/barthynarms/contribution/main/data.json",
-    deadline: "2026-12-31",            // or Leave empty to hide the countdown.
-    nameMode: "full",              // "full" shows names, "initials" shows H.O. instead
+    deadline: "2026-12-31",            // Leave empty to hide the countdown.
     refreshSeconds: 60,
 
     
@@ -314,7 +354,6 @@
   }
   function showName(name) {
     const words = String(name || "").trim().split(/\s+/).filter(Boolean);
-    if (CONFIG.nameMode === "initials") return words.map(w => w[0].toUpperCase() + ".").join("");
     return words.map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(" ");
   }
 
@@ -374,6 +413,12 @@
     $("remainingAmount").textContent = formatNaira(Math.max(target - raised, 0));
     $("percentLabel").textContent = percent.toFixed(1) + "% funded";
     $("barFill").style.width = percent + "%";
+    $("barTrack").setAttribute("aria-valuenow", Math.round(percent));
+    if (percent >= 100 && !window._goalCelebrated) {
+      window._goalCelebrated = true;
+      $("milestoneBanner").classList.add("visible");
+      launchConfetti();
+    }
     $("memberCount").textContent = list.length;
     $("avgAmount").textContent = formatNaira(list.length ? raised / list.length : 0);
     $("lastUpdated").textContent = data.last_updated || data.lastUpdated || "—";
@@ -382,17 +427,35 @@
     renderList();
   }
 
+  function launchConfetti() {
+    const colors = ['#C9973A', '#34523F', '#E0B45C', '#9FC4AC', '#1F7A4D', '#DDECDF'];
+    for (let i = 0; i < 90; i++) {
+      const p = document.createElement('div');
+      p.className = 'confetti-piece';
+      p.style.left = (Math.random() * 100) + 'vw';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      p.style.animationDelay = (Math.random() * 2) + 's';
+      p.style.animationDuration = (2 + Math.random() * 2) + 's';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 4500);
+    }
+  }
+
   function load() {
     fetch(CONFIG.dataUrl + "?t=" + Date.now())
       .then(r => { if (!r.ok) throw new Error("data.json not found"); return r.json(); })
-      .then(renderPage)
-      .catch(err => { console.warn("Could not load data:", err); if (!current.target) renderPage(current); });
+      .then(data => { $("errorBanner").style.display = "none"; renderPage(data); })
+      .catch(err => {
+        console.warn("Could not load data:", err);
+        $("errorBanner").style.display = "block";
+        if (!current.target) renderPage(current);
+      });
   }
 
   $("sortSel").onchange = renderList;
   renderDeadline(); renderPayment(); load();
   setInterval(load, CONFIG.refreshSeconds * 1000);
-  setInterval(renderDeadline, 3600000);
+  setInterval(renderDeadline, 60000);
 </script>
 </body>
 </html>

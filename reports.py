@@ -65,3 +65,26 @@ def export_report(contributions):
         writer.writerow(["Remaining", TARGET - raised])
         writer.writerow(["Total Members", len(contributions)])
     return filepath
+
+
+def search_contributions(contributions):
+    if not contributions:
+        print("No contributions yet.")
+        return
+    query = input("Search name: ").strip()
+    if not query:
+        print("No search term entered.")
+        return
+    results = [
+        (i + 1, entry)
+        for i, entry in enumerate(contributions)
+        if query.lower() in entry["name"].lower()
+    ]
+    if not results:
+        print(f"No contributors found matching '{query}'.")
+        return
+    print(f"\n--- Search Results for '{query}' ---")
+    for num, entry in results:
+        amount_str = f"₦{entry['amount']:,.2f}"
+        print(f"{num:<4}{entry['name']:<22}{amount_str:<15}{entry['date']}")
+    print("-" * 60)
